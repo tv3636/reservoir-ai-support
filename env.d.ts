@@ -3,7 +3,7 @@ declare global {
     interface ProcessEnv {
       // Required env variables
       DISCORD_BOT_TOKEN: string;
-      DISCORD_CLIENT_ID: string;
+      OPENAI_API_KEY: string;
     }
   }
 }

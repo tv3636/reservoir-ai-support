@@ -1,6 +1,7 @@
 import discord, { ChannelType, GatewayIntentBits, Partials } from 'discord.js';
 import dotenv from 'dotenv';
 import { getMessageHistory } from './utils/discord-utils';
+import { addEmbeddingToDocs } from './utils/embedding';
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ client.on('ready', async () => {
       }
     }
   }
+
+  //addEmbeddingToDocs();
 });
 
 client.on('messageCreate', (message: any) => {

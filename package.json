@@ -13,8 +13,10 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@dqbd/tiktoken": "^1.0.2",
     "discord.js": "^14.7.1",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "openai": "^3.2.1"
   },
   "devDependencies": {
     "@types/node": "^18.11.10",
