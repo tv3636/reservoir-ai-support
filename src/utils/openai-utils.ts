@@ -147,7 +147,7 @@ export async function getResponseForQuery(query: string) {
 
     // Get top 10 messages
     let messageString = "";
-    (await getBestMatchingMessages(queryEmbedding)).slice(0, 10).map(async (result) => {
+    (await getBestMatchingMessages(queryEmbedding)).slice(0, 5).map(async (result) => {
       console.log(result);
       let path = result.file.split('/');      
       let [thread, threadText] = await getThreadForMessage(path[1], path[2], false);
@@ -158,22 +158,24 @@ export async function getResponseForQuery(query: string) {
 
     // Get top 10 API Paths
     let apiString = "";
-    (await getBestMatchingAPI(queryEmbedding)).slice(0, 10).map((result) => {
+    (await getBestMatchingAPI(queryEmbedding)).slice(0, 5).map((result) => {
       console.log(result);
       let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
       apiString += JSON.stringify(api[result.path] + "\n", null, 4);
     });    
 
+    console.log(query);
+
     const completion = await openai.createChatCompletion({
       model: 'gpt-4',
       messages: [
-        {"role": "system", "content": "You are a friendly and helpful user support agent for the Reservoir API. You use the Reservoir API docs to answer user questions."},
+        {"role": "system", "content": "You are a friendly and helpful user support agent on the Reservoir team. You use the Reservoir docs, API specs, and support history to answer user questions in Discord."},
         {"role": "user", "content": "Here are some relevant docs to help answer user questions: \n" + docString},
-        {"role": "user", "content": "You can also use the following support chat history to help answer the question: \n" + messageString},
+        {"role": "user", "content": "The following support chat history may be relevant to help answer the question: \n" + messageString},
         {"role": "user", "content": "You can also use the following API specs to help answer the question: \n" + apiString},
         {"role": "user", "content": "The user's question is: " + query}
       ],
-      temperature: 0.3,
+      temperature: 0.25,
     })
 
     console.log(completion.data.choices[0].message);
