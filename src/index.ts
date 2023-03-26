@@ -1,7 +1,7 @@
 import discord, { ChannelType, GatewayIntentBits, Partials } from 'discord.js';
 import dotenv from 'dotenv';
 import { getMessageHistory } from './utils/discord-utils';
-import { addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
+import { addEmbeddingtoAPI, addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
 
 dotenv.config();
 
@@ -47,6 +47,7 @@ client.on('ready', async () => {
 
   //addEmbeddingToDocs();
   //addEmbeddingToMessages();
+  //addEmbeddingtoAPI();
 });
 
 client.on('messageCreate', async (message: any) => {
