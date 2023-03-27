@@ -1,6 +1,6 @@
-import discord, { ChannelType, GatewayIntentBits, Partials } from 'discord.js';
+import discord, { ChannelType, Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
-import { getMessageHistory } from './utils/discord-utils';
+import { getButton, getMessageHistory, newThread, userOptIn } from './utils/discord-utils';
 import { addEmbeddingtoAPI, addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
 
 dotenv.config();
@@ -50,16 +50,31 @@ client.on('ready', async () => {
   //addEmbeddingtoAPI();
 });
 
-client.on('messageCreate', async (message: any) => {
+client.on('messageCreate', async (message: discord.Message) => {
   if (message.author.bot) return;
-
-  
-  console.log(message.content);
-  if (message.content.startsWith('!reservoir')) { 
-    console.log('hello');
-    await getResponseForQuery(message.content.slice(11));
+    
+  if (newThread(message)) { 
+    userOptIn(message.channel as ThreadChannel);
   }
   
+});
+
+// Button click
+client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => {
+	if (!interaction.isButton()) return;
+  
+  try {
+    const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();  
+    if (op && interaction.channel) {            
+      await interaction.deferReply();
+      //await interaction.update({ components: [getButton(false)] });
+      let response = await getResponseForQuery(op.content);
+      await interaction.editReply({ content: response?.content });  
+    }  
+  } catch (e) {
+    console.log(e);
+  } 
+
 });
 
 // Wake up 🤖

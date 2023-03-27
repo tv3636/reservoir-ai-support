@@ -1,4 +1,4 @@
-import discord from 'discord.js';
+import discord, { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ThreadChannel } from 'discord.js';
 import fs from 'fs';
 
 export const saveMessage = async (message: discord.Message, parentChannel?: discord.BaseGuildTextChannel) => {
@@ -29,4 +29,30 @@ export const getMessageHistory = async (channel: discord.AnyThreadChannel | disc
         message = 0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
       })
   }
+}
+
+export const newThread = (message: discord.Message) => {
+  return message.channel.isThread() && message.channel.messageCount && message.channel.messageCount == 2;
+}
+
+export const getButton = (enabled: boolean) => {
+  return new ActionRowBuilder<ButtonBuilder>()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('primary')
+        .setLabel('Ask Reservoir AI')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(!enabled)
+    );
+}
+
+export const userOptIn = async (channel: ThreadChannel) => {
+  const embed = new EmbedBuilder()
+    .setTitle('Ask Reservoir\'s experimental AI Intern?')
+    .setFooter({ text: 'Please note that this is an experimental feature and the accuracy of responses cannot be guaranteed.'});
+
+  await channel.send({ 
+    embeds: [embed], 
+    components: [getButton(true)] 
+  });
 }
