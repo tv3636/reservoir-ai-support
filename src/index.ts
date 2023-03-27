@@ -22,29 +22,8 @@ const client = new discord.Client({
 client.on('ready', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
   
-  /*
-  let guilds = await client.guilds.fetch();
-  for (let guild of guilds) {
-    let server = await client.guilds.fetch(guild[1].id);
-    let channels = await server.channels.fetch();
-
-    for (let channelId of ['926358989770473493', '1050437822915547156', '1050438658827759766']) {
-      let channel = await server.channels.fetch(channelId);
-      // Get message history for all text channels
-      if (channel?.type == ChannelType.GuildText) {
-        getMessageHistory(channel);
-
-        // Get message history for all threads
-        let threads = await channel.threads.fetch();
-        for (let thread of threads.threads) {
-          getMessageHistory(thread[1], channel);
-        }
-      }
-    }
-    
-  }
-  */
-
+  // TODO - move to background jobs
+  //saveMessageHistory();;
   //addEmbeddingToDocs();
   //addEmbeddingToMessages();
   //addEmbeddingtoAPI();
@@ -67,6 +46,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
     const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();  
     if (op && interaction.channel) {            
       await interaction.deferReply();
+      // TODO - disable button after click
       //await interaction.update({ components: [getButton(false)] });
       let response = await getResponseForQuery(op.content);
       await interaction.editReply({ content: response?.content });  

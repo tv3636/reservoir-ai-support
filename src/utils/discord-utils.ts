@@ -1,4 +1,4 @@
-import discord, { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ThreadChannel } from 'discord.js';
+import discord, { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, ThreadChannel } from 'discord.js';
 import fs from 'fs';
 
 export const saveMessage = async (message: discord.Message, parentChannel?: discord.BaseGuildTextChannel) => {
@@ -28,6 +28,29 @@ export const getMessageHistory = async (channel: discord.AnyThreadChannel | disc
         messagePage.forEach(msg => saveMessage(msg, parentChannel));
         message = 0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
       })
+  }
+}
+
+export const saveMessageHistory = async (client: discord.Client) => {
+  let guilds = await client.guilds.fetch();
+  for (let guild of guilds) {
+    let server = await client.guilds.fetch(guild[1].id);
+    let channels = await server.channels.fetch();
+
+    for (let channelId of ['926358989770473493', '1050437822915547156', '1050438658827759766']) {
+      let channel = await server.channels.fetch(channelId);
+      // Get message history for all text channels
+      if (channel?.type == ChannelType.GuildText) {
+        getMessageHistory(channel);
+
+        // Get message history for all threads
+        let threads = await channel.threads.fetch();
+        for (let thread of threads.threads) {
+          getMessageHistory(thread[1], channel);
+        }
+      }
+    }
+    
   }
 }
 
