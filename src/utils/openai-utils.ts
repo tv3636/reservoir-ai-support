@@ -38,33 +38,33 @@ function similaritySorted(results: any) {
 
 // Add Embeddings
 export async function addEmbeddingtoAPI() {
-  let api = JSON.parse(fs.readFileSync('./api.json', 'utf8'));
+  let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
   for (var apiPath of Object.keys(api)) {
     let embedding = await getEmbeddingForText(JSON.stringify(api[apiPath], null, 4));
     api[apiPath].embedding = embedding;
     console.log(`Saved embedding for ${apiPath}`);
   }
-  fs.writeFileSync('./api.json', JSON.stringify(api, null, 4));
+  fs.writeFileSync('api.json', JSON.stringify(api, null, 4));
 }
 
 export async function addEmbeddingToDocs() {
-  for (const file of fs.readdirSync('./docs')) {
+  for (const file of fs.readdirSync('docs')) {
     let doc = JSON.parse(
-      fs.readFileSync(`./docs/${file}`, 'utf8')
+      fs.readFileSync(`docs/${file}`, 'utf8')
     );
 
     let embedding = await getEmbeddingForText(`${doc.doc.title}\n${doc.doc.body}`);    
     doc.embedding = embedding;
     
-    fs.writeFileSync(`./docs/${file}`, JSON.stringify(doc, null, 4));
+    fs.writeFileSync(`docs/${file}`, JSON.stringify(doc, null, 4));
     console.log(`Saved embedding for ${doc.doc.title}`);
   }
 }
 
 export async function addEmbeddingToMessages() {
-  for (const channel_id of fs.readdirSync('./messages')) {
-    for (const message_id of fs.readdirSync(`./messages/${channel_id}`)) {
-      let path = `./messages/${channel_id}/${message_id}`;
+  for (const channel_id of fs.readdirSync('messages')) {
+    for (const message_id of fs.readdirSync(`messages/${channel_id}`)) {
+      let path = `messages/${channel_id}/${message_id}`;
       if (fs.lstatSync(path).isDirectory() && fs.existsSync(`${path}.json`)) {
         await getThreadForMessage(channel_id, message_id, true);                
       }
@@ -75,9 +75,9 @@ export async function addEmbeddingToMessages() {
 // Get best matching content
 export async function getBestMatchingDocs(queryEmbedding: any) {
   let results: any = {};
-  for (const file of fs.readdirSync('./docs')) {
+  for (const file of fs.readdirSync('docs')) {
     let doc = JSON.parse(
-      fs.readFileSync(`./docs/${file}`, 'utf8')
+      fs.readFileSync(`docs/${file}`, 'utf8')
     );
 
     results[file] = similarity(queryEmbedding, doc.embedding);
@@ -88,9 +88,9 @@ export async function getBestMatchingDocs(queryEmbedding: any) {
 
 export async function getBestMatchingMessages(queryEmbedding: any) {
   let results: any = {};
-  for (const channel_id of fs.readdirSync('./messages')) {
-    for (const message_id of fs.readdirSync(`./messages/${channel_id}`)) {
-      let path = `./messages/${channel_id}/${message_id}`;
+  for (const channel_id of fs.readdirSync('messages')) {
+    for (const message_id of fs.readdirSync(`messages/${channel_id}`)) {
+      let path = `messages/${channel_id}/${message_id}`;
       if (fs.lstatSync(path).isDirectory() && fs.existsSync(`${path}.json`)) {
         let [thread, threadText] = await getThreadForMessage(channel_id, message_id, false);
         results[path] = similarity(queryEmbedding, thread.embedding);
@@ -103,7 +103,7 @@ export async function getBestMatchingMessages(queryEmbedding: any) {
 
 export async function getBestMatchingAPI(queryEmbedding: any) {
   let results: any = {};
-  let api = JSON.parse(fs.readFileSync('./api.json', 'utf8'));
+  let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
   for (var apiPath of Object.keys(api)) {
     results[apiPath] = similarity(queryEmbedding, api[apiPath].embedding);
   }
@@ -114,13 +114,13 @@ export async function getBestMatchingAPI(queryEmbedding: any) {
 // Get full thread text for given thread. Optionally add embedding to thread
 async function getThreadForMessage(channelId: string, messageId: string, addEmbedding: boolean) {
   let messages = '';
-  let firstMessagePath = `./messages/${channelId}/${messageId}.json`;
+  let firstMessagePath = `messages/${channelId}/${messageId}.json`;
   let threadMessage = JSON.parse(fs.readFileSync(firstMessagePath, 'utf8'));
   messages += threadMessage.content + "\n";
 
-  for (const threadFile of fs.readdirSync(`./messages/${channelId}/${messageId}`)) {          
+  for (const threadFile of fs.readdirSync(`messages/${channelId}/${messageId}`)) {          
     let message = JSON.parse(
-      fs.readFileSync(`./messages/${channelId}/${messageId}/${threadFile}`, 'utf8')
+      fs.readFileSync(`messages/${channelId}/${messageId}/${threadFile}`, 'utf8')
     );
     messages += message.content + "\n";         
   }
@@ -138,7 +138,7 @@ async function getThreadForMessage(channelId: string, messageId: string, addEmbe
 // Get text from matches
 function getDocFromMatch(match: any) {
   if (match) {
-    return JSON.parse(fs.readFileSync(`./docs/${match.file}`, 'utf8')).doc.body + "\n"
+    return JSON.parse(fs.readFileSync(`docs/${match.file}`, 'utf8')).doc.body + "\n"
   } 
 
   return '';
@@ -155,7 +155,7 @@ async function getMessageFromMatch(match: any) {
 
 function getAPIFromMatch(match: any) {
   if (match) {
-    let api = JSON.parse(fs.readFileSync('./api.json', 'utf8'));
+    let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
     return JSON.stringify(api[match.path], null, 4);
   }
 
