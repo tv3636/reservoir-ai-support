@@ -15,6 +15,12 @@ const model = 'text-embedding-ada-002';
 const enc = encoding_for_model(model);
 const MAX_TOKENS = 8191;
 
+const SYSTEM_PROMPT = "You are a friendly and helpful user support agent on the Reservoir team. You use the Reservoir docs, API specs, and support history to answer user questions in Discord.";
+const DOC_PROMPT = "Here are some relevant docs to help answer user questions: \n";
+const MESSAGE_PROMPT = "The following support chat history may be relevant to help answer the question: \n";
+const API_PROMPT = "You can also use the following API specs to help answer the question: \n";
+const QUERY_PROMPT = "The user's question is: ";
+
 async function getEmbeddingForText(text: string) {
   const { data: embed } = await openai.createEmbedding({
     input: text,
@@ -132,48 +138,87 @@ async function getThreadForMessage(channelId: string, messageId: string, addEmbe
   return [threadMessage, messages];
 }
 
+// Get text from matches
+
+function getDocFromMatch(match: any) {
+  if (match) {
+    return JSON.parse(fs.readFileSync(`docs/${match.file}`, 'utf8')).doc.body + "\n"
+  } 
+
+  return '';
+}
+
+async function getMessageFromMatch(match: any) {
+  if (match) {
+    let [thread, threadText] = await getThreadForMessage(match.file.split('/')[1], match.file.split('/')[2], false);
+    return threadText;
+  }
+
+  return '';
+}
+
+function getAPIFromMatch(match: any) {
+  if (match) {
+    let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
+    return JSON.stringify(api[match.path], null, 4);
+  }
+
+  return '';
+}
+
+// Validate token length
+
+function tokensValid(text: string, buffer: number) {
+  return enc.encode(text + SYSTEM_PROMPT + DOC_PROMPT + MESSAGE_PROMPT + API_PROMPT).length <= MAX_TOKENS - buffer;
+}
+
 // Answer user question with best available resources
 
 export async function getResponseForQuery(query: string) {
   if (enc.encode(query).length <= MAX_TOKENS) {
     let queryEmbedding = await getEmbeddingForText(query);
 
-    // Get top 3 docs
+    let docs = await getBestMatchingDocs(queryEmbedding);
+    let messages = await getBestMatchingMessages(queryEmbedding);
+    let api = await getBestMatchingAPI(queryEmbedding);
+
     let docString = "";
-    (await getBestMatchingDocs(queryEmbedding)).slice(0, 3).map((result) => {
-      console.log(result);
-      docString += JSON.parse(fs.readFileSync(`docs/${result.file}`, 'utf8')).doc.body + "\n";
-    });  
-
-    // Get top 10 messages
     let messageString = "";
-    (await getBestMatchingMessages(queryEmbedding)).slice(0, 5).map(async (result) => {
-      console.log(result);
-      let path = result.file.split('/');      
-      let [thread, threadText] = await getThreadForMessage(path[1], path[2], false);
-      messageString += threadText + "\n";
-
-      console.log(threadText);
-    });
-
-    // Get top 10 API Paths
     let apiString = "";
-    (await getBestMatchingAPI(queryEmbedding)).slice(0, 5).map((result) => {
-      console.log(result);
-      let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
-      apiString += JSON.stringify(api[result.path] + "\n", null, 4);
-    });    
+
+    while (tokensValid(docString + messageString + apiString, 1000)) {
+      let docResult = docs.shift();
+      console.log(docResult);
+      let nextDoc = getDocFromMatch(docResult);
+      if (tokensValid(nextDoc + docString + messageString + apiString, 250)) {
+        docString += nextDoc + "\n";
+      }
+
+      let messageResult = messages.shift();
+      console.log(messageResult);
+      let nextMessage = await getMessageFromMatch(messageResult);
+      if (tokensValid(nextMessage + docString + messageString + apiString, 250)) {
+        messageString += nextMessage + "\n";
+      }
+
+      let apiResult = api.shift();
+      console.log(apiResult);
+      let nextAPI = getAPIFromMatch(api.shift());
+      if (tokensValid(nextAPI + docString + messageString + apiString, 250)) {
+        apiString += nextAPI + "\n";
+      }      
+    }
 
     console.log(query);
 
     const completion = await openai.createChatCompletion({
       model: 'gpt-4',
       messages: [
-        {"role": "system", "content": "You are a friendly and helpful user support agent on the Reservoir team. You use the Reservoir docs, API specs, and support history to answer user questions in Discord."},
-        {"role": "user", "content": "Here are some relevant docs to help answer user questions: \n" + docString},
-        {"role": "user", "content": "The following support chat history may be relevant to help answer the question: \n" + messageString},
-        {"role": "user", "content": "You can also use the following API specs to help answer the question: \n" + apiString},
-        {"role": "user", "content": "The user's question is: " + query}
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": DOC_PROMPT + docString},
+        {"role": "user", "content": MESSAGE_PROMPT + messageString},
+        {"role": "user", "content": API_PROMPT + apiString},
+        {"role": "user", "content": QUERY_PROMPT + query}
       ],
       temperature: 0.25,
     })
