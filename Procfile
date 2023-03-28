@@ -1,1 +1,2 @@
-web: node dist/index.js
+web: echo "test"
+service: node dist/index.js
