@@ -69,13 +69,49 @@ export const getButton = (enabled: boolean) => {
     );
 }
 
-export const userOptIn = async (channel: ThreadChannel) => {
-  const embed = new EmbedBuilder()
-    .setTitle('Ask Reservoir\'s experimental AI Intern?')
+export const getOptInEmbed = () => {
+  return new EmbedBuilder()
+    .setTitle('Ask AI while you wait?')
     .setFooter({ text: 'Please note that this is an experimental feature and the accuracy of responses cannot be guaranteed.'});
+}
+
+export const userOptIn = async (channel: ThreadChannel) => {
+  const embed = getOptInEmbed();
 
   await channel.send({ 
     embeds: [embed], 
     components: [getButton(true)] 
   });
+}
+
+export const getFeedbackButtons = (response?: string) => {
+  let actionBuilder = new ActionRowBuilder<ButtonBuilder>();
+
+  if (!response || response == 'yes') {
+    actionBuilder.addComponents(
+      new ButtonBuilder()
+        .setCustomId('yes')
+        .setLabel('Yes')
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(response != undefined)
+    );
+  }
+
+  if (!response || response == 'no') {
+    actionBuilder.addComponents(
+      new ButtonBuilder()
+        .setCustomId('no')
+        .setLabel('No')
+        .setStyle(ButtonStyle.Danger)
+        .setDisabled(response != undefined)
+    );
+  }
+
+  return actionBuilder;  
+}
+
+export const getFeedbackEmbed = () => {
+  return new EmbedBuilder()
+    .setTitle('Did this answer your question?')
+    .setFooter({ text: 'If not, a human will get back to you shortly.'});
 }

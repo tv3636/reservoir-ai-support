@@ -1,6 +1,6 @@
-import discord, { ChannelType, Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
+import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
-import { getButton, getMessageHistory, newThread, userOptIn } from './utils/discord-utils';
+import { getButton, getOptInEmbed, getFeedbackButtons, getMessageHistory, newThread, userOptIn, getFeedbackEmbed } from './utils/discord-utils';
 import { addEmbeddingtoAPI, addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
 
 dotenv.config();
@@ -43,13 +43,36 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
 	if (!interaction.isButton()) return;
   
   try {
-    const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();  
-    if (op && interaction.channel) {            
-      await interaction.deferReply();
-      // TODO - disable button after click
-      //await interaction.update({ components: [getButton(false)] });
-      let response = await getResponseForQuery(op.content);
-      await interaction.editReply({ content: response?.content });  
+    const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();
+
+    if (op && interaction.channel && interaction.user.id == op.author.id) {
+      if (interaction.customId == 'primary') {    
+        // Disable button to ask AI once clicked
+        await interaction.channel.messages.fetch(interaction.message.id).then(message => {
+          message.edit({ 
+            components: [getButton(false)], 
+            content: "", 
+            embeds: [getOptInEmbed()] 
+          });
+        });
+
+        // Show bot thinking indicator
+        await interaction.deferReply();
+
+        // Get AI response and send reply
+        let response = await getResponseForQuery(op.content);
+        await interaction.editReply({ 
+          content: response?.content, 
+          components: [getFeedbackButtons()],
+          embeds: [getFeedbackEmbed()]
+        });
+      } else {
+        // Update feedback buttons with user response
+        await interaction.update({
+          components: [getFeedbackButtons(interaction.customId)],
+          embeds: [getFeedbackEmbed()]
+        })
+      }
     }  
   } catch (e) {
     console.log(e);
