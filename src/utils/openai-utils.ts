@@ -30,8 +30,13 @@ async function getEmbeddingForText(text: string) {
   return embed.data[0]['embedding'];
 }
 
-// Add Embeddings
+function similaritySorted(results: any) {
+  return Object.keys(results).sort((a, b) => results[b] - results[a]).map(
+    key => ({ file: key, similarity: results[key] })
+  );
+}
 
+// Add Embeddings
 export async function addEmbeddingtoAPI() {
   let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
   for (var apiPath of Object.keys(api)) {
@@ -68,7 +73,6 @@ export async function addEmbeddingToMessages() {
 }
 
 // Get best matching content
-
 export async function getBestMatchingDocs(queryEmbedding: any) {
   let results: any = {};
   for (const file of fs.readdirSync('docs')) {
@@ -79,9 +83,7 @@ export async function getBestMatchingDocs(queryEmbedding: any) {
     results[file] = similarity(queryEmbedding, doc.embedding);
   }
 
-  return Object.keys(results).sort((a, b) => results[b] - results[a]).map(
-    key => ({ file: key, similarity: results[key] })
-  );
+  return similaritySorted(results);
 }
 
 export async function getBestMatchingMessages(queryEmbedding: any) {
@@ -96,9 +98,7 @@ export async function getBestMatchingMessages(queryEmbedding: any) {
     }
   }
 
-  return Object.keys(results).sort((a, b) => results[b] - results[a]).map(
-    key => ({ file: key, similarity: results[key] })
-  );
+  return similaritySorted(results);
 }
 
 export async function getBestMatchingAPI(queryEmbedding: any) {
@@ -108,13 +108,10 @@ export async function getBestMatchingAPI(queryEmbedding: any) {
     results[apiPath] = similarity(queryEmbedding, api[apiPath].embedding);
   }
 
-  return Object.keys(results).sort((a, b) => results[b] - results[a]).map(
-    key => ({ path: key, similarity: results[key] })
-  );
+  return similaritySorted(results);
 }
 
 // Get full thread text for given thread. Optionally add embedding to thread
-
 async function getThreadForMessage(channelId: string, messageId: string, addEmbedding: boolean) {
   let messages = '';
   let firstMessagePath = `messages/${channelId}/${messageId}.json`;
@@ -139,7 +136,6 @@ async function getThreadForMessage(channelId: string, messageId: string, addEmbe
 }
 
 // Get text from matches
-
 function getDocFromMatch(match: any) {
   if (match) {
     return JSON.parse(fs.readFileSync(`docs/${match.file}`, 'utf8')).doc.body + "\n"
@@ -167,13 +163,11 @@ function getAPIFromMatch(match: any) {
 }
 
 // Validate token length
-
 function tokensValid(text: string, buffer: number) {
   return enc.encode(text + SYSTEM_PROMPT + DOC_PROMPT + MESSAGE_PROMPT + API_PROMPT).length <= MAX_TOKENS - buffer;
 }
 
 // Answer user question with best available resources
-
 export async function getResponseForQuery(query: string) {
   if (enc.encode(query).length <= MAX_TOKENS) {
     let queryEmbedding = await getEmbeddingForText(query);
@@ -186,7 +180,7 @@ export async function getResponseForQuery(query: string) {
     let messageString = "";
     let apiString = "";
 
-    while (tokensValid(docString + messageString + apiString, 1000)) {
+    while (docs && messages && api && tokensValid(docString + messageString + apiString, 1000)) {
       let docResult = docs.shift();
       console.log(docResult);
       let nextDoc = getDocFromMatch(docResult);

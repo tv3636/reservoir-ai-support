@@ -1,6 +1,6 @@
 import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
-import { getButton, getOptInEmbed, getFeedbackButtons, getMessageHistory, newThread, userOptIn, getFeedbackEmbed } from './utils/discord-utils';
+import { getButton, getOptInEmbed, getFeedbackButtons, getMessageHistory, newThread, userOptIn, getFeedbackEmbed, ASK_AI_BUTTON } from './utils/discord-utils';
 import { addEmbeddingtoAPI, addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
 
 dotenv.config();
@@ -30,7 +30,7 @@ client.on('ready', async () => {
 });
 
 client.on('messageCreate', async (message: discord.Message) => {
-  if (message.author.bot) return;
+  if(message.author.id === client.user?.id) return;
     
   if (newThread(message)) { 
     userOptIn(message.channel as ThreadChannel);
@@ -46,12 +46,11 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
     const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();
 
     if (op && interaction.channel && interaction.user.id == op.author.id) {
-      if (interaction.customId == 'primary') {    
+      if (interaction.customId == ASK_AI_BUTTON) {    
         // Disable button to ask AI once clicked
         await interaction.channel.messages.fetch(interaction.message.id).then(message => {
           message.edit({ 
             components: [getButton(false)], 
-            content: "", 
             embeds: [getOptInEmbed()] 
           });
         });
@@ -66,6 +65,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
           components: [getFeedbackButtons()],
           embeds: [getFeedbackEmbed()]
         });
+
       } else {
         // Update feedback buttons with user response
         await interaction.update({

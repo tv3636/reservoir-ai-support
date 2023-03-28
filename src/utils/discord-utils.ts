@@ -1,6 +1,10 @@
 import discord, { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, ThreadChannel } from 'discord.js';
 import fs from 'fs';
 
+export const ASK_AI_BUTTON = 'ask_ai';
+export const YES = 'Yes';
+export const NO = 'No';
+
 export const saveMessage = async (message: discord.Message, parentChannel?: discord.BaseGuildTextChannel) => {
   let directory = `messages/${parentChannel ? `${parentChannel.id}/` : ''}${message.channel.id}`;
   if (!fs.existsSync(directory)) {
@@ -62,7 +66,7 @@ export const getButton = (enabled: boolean) => {
   return new ActionRowBuilder<ButtonBuilder>()
     .addComponents(
       new ButtonBuilder()
-        .setCustomId('primary')
+        .setCustomId(ASK_AI_BUTTON)
         .setLabel('Ask Reservoir AI')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(!enabled)
@@ -87,21 +91,21 @@ export const userOptIn = async (channel: ThreadChannel) => {
 export const getFeedbackButtons = (response?: string) => {
   let actionBuilder = new ActionRowBuilder<ButtonBuilder>();
 
-  if (!response || response == 'yes') {
+  if (!response || response == YES) {
     actionBuilder.addComponents(
       new ButtonBuilder()
-        .setCustomId('yes')
-        .setLabel('Yes')
+        .setCustomId(YES)
+        .setLabel(YES)
         .setStyle(ButtonStyle.Success)
         .setDisabled(response != undefined)
     );
   }
 
-  if (!response || response == 'no') {
+  if (!response || response == NO) {
     actionBuilder.addComponents(
       new ButtonBuilder()
-        .setCustomId('no')
-        .setLabel('No')
+        .setCustomId(NO)
+        .setLabel(NO)
         .setStyle(ButtonStyle.Danger)
         .setDisabled(response != undefined)
     );
