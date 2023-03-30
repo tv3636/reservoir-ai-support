@@ -1,7 +1,9 @@
 import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
 import { getButton, getOptInEmbed, getFeedbackButtons, getMessageHistory, newThread, userOptIn, getFeedbackEmbed, ASK_AI_BUTTON } from './utils/discord-utils';
-import { addEmbeddingtoAPI, addEmbeddingToDocs, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
+import { addEmbeddingtoAPI, addEmbeddingToMessages, getResponseForQuery } from './utils/openai-utils';
+import { getDocs } from './sources/doc';
+import { getApis } from './sources/api';
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ const client = new discord.Client({
 
 client.on('ready', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
+
+  getApis();
   
   // TODO - move to background jobs
   //saveMessageHistory();;

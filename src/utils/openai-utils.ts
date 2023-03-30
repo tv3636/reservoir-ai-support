@@ -21,7 +21,7 @@ const MESSAGE_PROMPT = "The following support chat history may be relevant to he
 const API_PROMPT = "You can also use the following API specs to help answer the question: \n";
 const QUERY_PROMPT = "The user's question is: ";
 
-async function getEmbeddingForText(text: string) {
+export async function getEmbeddingForText(text: string) {
   const { data: embed } = await openai.createEmbedding({
     input: text,
     model: model
@@ -45,20 +45,6 @@ export async function addEmbeddingtoAPI() {
     console.log(`Saved embedding for ${apiPath}`);
   }
   fs.writeFileSync('api.json', JSON.stringify(api, null, 4));
-}
-
-export async function addEmbeddingToDocs() {
-  for (const file of fs.readdirSync('docs')) {
-    let doc = JSON.parse(
-      fs.readFileSync(`docs/${file}`, 'utf8')
-    );
-
-    let embedding = await getEmbeddingForText(`${doc.doc.title}\n${doc.doc.body}`);    
-    doc.embedding = embedding;
-    
-    fs.writeFileSync(`docs/${file}`, JSON.stringify(doc, null, 4));
-    console.log(`Saved embedding for ${doc.doc.title}`);
-  }
 }
 
 export async function addEmbeddingToMessages() {
