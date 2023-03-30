@@ -36,17 +36,6 @@ function similaritySorted(results: any) {
   );
 }
 
-// Add Embeddings
-export async function addEmbeddingtoAPI() {
-  let api = JSON.parse(fs.readFileSync('api.json', 'utf8'));
-  for (var apiPath of Object.keys(api)) {
-    let embedding = await getEmbeddingForText(JSON.stringify(api[apiPath], null, 4));
-    api[apiPath].embedding = embedding;
-    console.log(`Saved embedding for ${apiPath}`);
-  }
-  fs.writeFileSync('api.json', JSON.stringify(api, null, 4));
-}
-
 export async function addEmbeddingToMessages() {
   for (const channel_id of fs.readdirSync('messages')) {
     for (const message_id of fs.readdirSync(`messages/${channel_id}`)) {
