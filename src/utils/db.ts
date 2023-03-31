@@ -1,7 +1,6 @@
 import PgPromise from "pg-promise";
 import dotenv from 'dotenv';
-import { Doc } from "../sources/doc";
-import { Api } from "../sources/api";
+import { Doc, Api, Message } from "../types";
 
 dotenv.config();
 
@@ -35,11 +34,10 @@ export const insertDoc = async (doc: Doc) => {
 
   try {
     await db.none(query, doc);
+    console.log(`inserted doc for slug ${doc.slug}`);
   } catch (e) {
     console.log(`failed to insert doc for slug ${doc.slug}`, e);
-  }
-
-  console.log(`inserted doc for slug ${doc.slug}`);
+  }  
 };
 
 export const insertApi = async (api: Api) => {
@@ -55,9 +53,32 @@ export const insertApi = async (api: Api) => {
 
   try {
     await db.none(query, api);
+    console.log(`inserted api for path ${api.path}`);
   } catch (e) {
     console.log(`failed to insert api for path ${api.path}`, e);
-  }
-
-  console.log(`inserted api for path ${api.path}`);
+  } 
 }
+
+export const insertMessage = async (message: Message) => {
+  const query = `
+    INSERT INTO messages (id, embedding, text, date, author_id, thread_id)
+    VALUES ($/id/, $/embedding/, $/text/, $/timestamp/, $/author_id/, $/thread_id/)
+    ON CONFLICT (id) DO UPDATE SET
+      embedding = $/embedding/,
+      text = $/text/,
+      date = $/timestamp/,
+      author_id = $/author_id/,
+      thread_id = $/thread_id/
+  `;
+
+  try {
+    await db.none(query, message);
+    console.log(`inserted message for id ${message.id}`);
+  } catch (e) {
+    console.log(`failed to insert message for id ${message.id}`, e);
+  }  
+}
+
+export const getAll = async (table: string) => {
+  return await db.any(`SELECT * FROM ${table}`);
+};

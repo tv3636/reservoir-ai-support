@@ -1,12 +1,19 @@
 import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
 import dotenv from 'dotenv';
-import { getButton, getOptInEmbed, getFeedbackButtons, newThread, userOptIn, getFeedbackEmbed, ASK_AI_BUTTON } from './utils/discord-utils';
-import { getResponseForQuery } from './utils/openai-utils';
+import { getAll } from './utils/db';
+import { getAskButton, getOptInEmbed, getFeedbackButtons, newThread, userOptIn, getFeedbackEmbed, ASK_AI_BUTTON } from './utils/discord';
+import { getResponseForQuery } from './utils/openai';
 
 dotenv.config();
 
 if (!process.env.DISCORD_BOT_TOKEN) {
   throw new Error('No bot token found!');
+}
+
+export const resources: any = {
+  'docs': [],
+  'apis': [],
+  'messages': [],
 }
 
 const client = new discord.Client({
@@ -18,18 +25,27 @@ const client = new discord.Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-
 client.on('ready', async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
+
+  try {
+    // Load resources with embeddings from database
+    for (const resource of Object.keys(resources)) {
+      resources[resource] = await getAll(resource);
+      console.log(`Loaded ${resources[resource].length} ${resource} from database.`);
+    }
+  } catch (e) {
+    console.log(e);
+  }  
 });
 
 client.on('messageCreate', async (message: discord.Message) => {
-  if(message.author.id === client.user?.id) return;
+  if (message.author.id === client.user?.id) return;
     
+  
   if (newThread(message)) { 
     userOptIn(message.channel as ThreadChannel);
-  }
-  
+  }   
 });
 
 // Button click
@@ -44,7 +60,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
         // Disable button to ask AI once clicked
         await interaction.channel.messages.fetch(interaction.message.id).then(message => {
           message.edit({ 
-            components: [getButton(false)], 
+            components: [getAskButton(false)], 
             embeds: [getOptInEmbed()] 
           });
         });
@@ -71,7 +87,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
   } catch (e) {
     console.log(e);
   } 
-
+  
 });
 
 // Wake up 🤖
