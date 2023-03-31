@@ -1,5 +1,5 @@
 import PgPromise from "pg-promise";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 import { Doc, Api, Message } from "../types";
 
 dotenv.config();
@@ -37,7 +37,7 @@ export const insertDoc = async (doc: Doc) => {
     console.log(`inserted doc for slug ${doc.slug}`);
   } catch (e) {
     console.log(`failed to insert doc for slug ${doc.slug}`, e);
-  }  
+  }
 };
 
 export const insertApi = async (api: Api) => {
@@ -56,8 +56,8 @@ export const insertApi = async (api: Api) => {
     console.log(`inserted api for path ${api.path}`);
   } catch (e) {
     console.log(`failed to insert api for path ${api.path}`, e);
-  } 
-}
+  }
+};
 
 export const insertMessage = async (message: Message) => {
   const query = `
@@ -76,8 +76,8 @@ export const insertMessage = async (message: Message) => {
     console.log(`inserted message for id ${message.id}`);
   } catch (e) {
     console.log(`failed to insert message for id ${message.id}`, e);
-  }  
-}
+  }
+};
 
 export const getAll = async (table: string) => {
   return await db.any(`SELECT * FROM ${table}`);

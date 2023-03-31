@@ -15,7 +15,7 @@ export interface Doc {
 }
 
 export interface Message {
-  id: string;  
+  id: string;
   embedding: number[];
   text: string;
   timestamp: Date;

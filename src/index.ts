@@ -1,20 +1,28 @@
-import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from 'discord.js';
-import dotenv from 'dotenv';
-import { getAll } from './utils/db';
-import { getAskButton, getOptInEmbed, getFeedbackButtons, newThread, userOptIn, getFeedbackEmbed, ASK_AI_BUTTON } from './utils/discord';
-import { getResponseForQuery } from './utils/openai';
+import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from "discord.js";
+import dotenv from "dotenv";
+import { getAll } from "./utils/db";
+import {
+  getAskButton,
+  getOptInEmbed,
+  getFeedbackButtons,
+  newThread,
+  userOptIn,
+  getFeedbackEmbed,
+  ASK_AI_BUTTON,
+} from "./utils/discord";
+import { getResponseForQuery } from "./utils/openai";
 
 dotenv.config();
 
 if (!process.env.DISCORD_BOT_TOKEN) {
-  throw new Error('No bot token found!');
+  throw new Error("No bot token found!");
 }
 
 export const resources: any = {
-  'docs': [],
-  'apis': [],
-  'messages': [],
-}
+  docs: [],
+  apis: [],
+  messages: [],
+};
 
 const client = new discord.Client({
   intents: [
@@ -25,7 +33,7 @@ const client = new discord.Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-client.on('ready', async () => {
+client.on("ready", async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
 
   try {
@@ -36,32 +44,31 @@ client.on('ready', async () => {
     }
   } catch (e) {
     console.log(e);
-  }  
+  }
 });
 
-client.on('messageCreate', async (message: discord.Message) => {
+client.on("messageCreate", async (message: discord.Message) => {
   if (message.author.id === client.user?.id) return;
-    
-  
-  if (newThread(message)) { 
+
+  if (newThread(message)) {
     userOptIn(message.channel as ThreadChannel);
-  }   
+  }
 });
 
 // Button click
 client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => {
-	if (!interaction.isButton()) return;
-  
+  if (!interaction.isButton()) return;
+
   try {
     const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();
 
     if (op && interaction.channel && interaction.user.id == op.author.id) {
-      if (interaction.customId == ASK_AI_BUTTON) {    
+      if (interaction.customId == ASK_AI_BUTTON) {
         // Disable button to ask AI once clicked
-        await interaction.channel.messages.fetch(interaction.message.id).then(message => {
-          message.edit({ 
-            components: [getAskButton(false)], 
-            embeds: [getOptInEmbed()] 
+        await interaction.channel.messages.fetch(interaction.message.id).then((message) => {
+          message.edit({
+            components: [getAskButton(false)],
+            embeds: [getOptInEmbed()],
           });
         });
 
@@ -70,24 +77,22 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
 
         // Get AI response and send reply
         let response = await getResponseForQuery(op.content);
-        await interaction.editReply({ 
-          content: response?.content, 
+        await interaction.editReply({
+          content: response?.content,
           components: [getFeedbackButtons()],
-          embeds: [getFeedbackEmbed()]
+          embeds: [getFeedbackEmbed()],
         });
-
       } else {
         // Update feedback buttons with user response
         await interaction.update({
           components: [getFeedbackButtons(interaction.customId)],
-          embeds: [getFeedbackEmbed()]
-        })
+          embeds: [getFeedbackEmbed()],
+        });
       }
-    }  
+    }
   } catch (e) {
     console.log(e);
-  } 
-  
+  }
 });
 
 // Wake up 🤖
