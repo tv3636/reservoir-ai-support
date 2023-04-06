@@ -21,30 +21,41 @@ const fetchAllMessages = async (thread: discord.AnyThreadChannel) => {
   return messages;
 };
 
-export const getThread = async (
-  thread: discord.AnyThreadChannel,
-  parentChannel: discord.TextBasedChannel
-) => {
+export const getThreadText = async(thread: discord.AnyThreadChannel, authorOnly?: boolean) => {
+  const threadMessages = await fetchAllMessages(thread);
+  const op = await thread.fetchStarterMessage();
+  let threadText = op?.content ?? "";
+
+  threadMessages.forEach((msg) => {
+    if (authorOnly && msg.author.id != op?.author.id) return;
+    threadText += `\n${msg.content}`;
+  });
+
+  return threadText;
+}
+
+export const getThread = async (thread: discord.AnyThreadChannel) => {
   let threadMessages = await fetchAllMessages(thread);
 
   if (threadMessages.length > 0) {
-    let threadText = "";
     const threadId = threadMessages[0].channelId;
 
     try {
-      let op = await parentChannel.messages.fetch(threadId);
-      threadMessages.unshift(op);
-      threadMessages.forEach((msg) => (threadText += `${msg.content}\n`));
-      const embedding = await getEmbeddingForText(threadText);
+      let op = await thread.fetchStarterMessage();
+      
+      if (op) {
+        const threadText = await getThreadText(thread);
+        const embedding = await getEmbeddingForText(threadText);
 
-      await insertMessage({
-        id: op.id,
-        embedding,
-        text: op.id == threadId ? threadText : op.content,
-        timestamp: new Date(op.createdTimestamp),
-        author_id: op.author.id,
-        thread_id: op.id == threadId ? undefined : threadId,
-      });
+        await insertMessage({
+          id: op.id,
+          embedding,
+          text: op.id == threadId ? threadText : op.content,
+          timestamp: new Date(op.createdTimestamp),
+          author_id: op.author.id,
+          thread_id: op.id == threadId ? undefined : threadId,
+        });
+      }
     } catch (e) {
       console.log(`failed to load thread ${threadId}`, e);
     }
@@ -65,7 +76,7 @@ export const getMessages = async (client: discord.Client) => {
         // Get message history for all threads
         let threads = await channel.threads.fetch();
         for (let thread of threads.threads) {
-          getThread(thread[1], channel);
+          getThread(thread[1]);
         }
       }
     }

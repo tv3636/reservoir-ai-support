@@ -1,5 +1,6 @@
 import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from "discord.js";
 import dotenv from "dotenv";
+import { getThreadText } from "./utils/backfill";
 import { getAll } from "./utils/db";
 import {
   getAskButton,
@@ -62,7 +63,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
   try {
     const op = await (interaction.channel as ThreadChannel).fetchStarterMessage();
 
-    if (op && interaction.channel && interaction.user.id == op.author.id) {
+    if (op && op.thread && interaction.channel && interaction.user.id == op.author.id) {
       if (interaction.customId == ASK_AI_BUTTON) {
         // Disable button to ask AI once clicked
         await interaction.channel.messages.fetch(interaction.message.id).then((message) => {
@@ -76,7 +77,8 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
         await interaction.deferReply();
 
         // Get AI response and send reply
-        let response = await getResponseForQuery(op.content);
+        const allMessages = await getThreadText(op.thread, true);
+        const response = await getResponseForQuery(allMessages);
         await interaction.editReply({
           content: response?.content,
           components: [getFeedbackButtons()],
