@@ -1,6 +1,6 @@
 import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from "discord.js";
 import dotenv from "dotenv";
-import { getThreadText } from "./utils/backfill";
+import { getApis, getDocs, getMessages, getThreadText } from "./utils/backfill";
 import { getAll } from "./utils/db";
 import {
   getAskButton,
@@ -37,6 +37,14 @@ const client = new discord.Client({
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
 
+  // Backfill database with resources if BACKFILL=1
+  if (process.env.BACKFILL) { 
+    console.log("Backfilling database with resources...");
+    getApis();
+    getDocs();
+    getMessages(client);
+  }
+
   try {
     // Load resources with embeddings from database
     for (const resource of Object.keys(resources)) {
@@ -47,6 +55,7 @@ client.on("ready", async () => {
     console.log(e);
   }
 });
+
 
 client.on("messageCreate", async (message: discord.Message) => {
   if (message.author.id === client.user?.id) return;
@@ -96,6 +105,7 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
     console.log(e);
   }
 });
+
 
 // Wake up 🤖
 client.login(process.env.DISCORD_BOT_TOKEN);
