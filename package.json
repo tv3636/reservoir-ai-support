@@ -1,8 +1,7 @@
 {
-  "name": "next-bot",
+  "name": "reservoir-ai-support",
   "version": "1.0.0",
   "main": "index.js",
-  "author": "Rafael Almeida",
   "license": "MIT",
   "scripts": {
     "start": "node dist/index.js",
