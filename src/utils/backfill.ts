@@ -1,9 +1,23 @@
-import { API_DOCS_BASE_URL, DOCS_BASE_URL, headers, slugs } from "../constants";
-import { insertApi, insertDoc, insertMessage } from "./db";
-import { getEmbeddingForText } from "./openai";
+import { insertMessage } from "./db";
+import { Configuration, OpenAIApi } from "openai";
 import discord from "discord.js";
 
-const fetchAllMessages = async (thread: discord.AnyThreadChannel) => {
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+const model = "text-embedding-ada-002";
+
+async function getEmbeddingForText(text: string) {
+  const { data: embed } = await openai.createEmbedding({
+    input: text,
+    model: model,
+  });
+
+  return embed.data[0]["embedding"];
+}
+
+export const fetchAllMessages = async (thread: discord.AnyThreadChannel) => {
   let messages: discord.Message[] = [];
 
   let message = await thread.messages.fetch({ limit: 1 }).then((messagePage) => {
@@ -21,18 +35,18 @@ const fetchAllMessages = async (thread: discord.AnyThreadChannel) => {
   return messages;
 };
 
-export const getThreadText = async(thread: discord.AnyThreadChannel, authorOnly?: boolean) => {
+export const getThreadText = async (thread: discord.AnyThreadChannel, authorOnly?: boolean) => {
   const threadMessages = await fetchAllMessages(thread);
   const op = await thread.fetchStarterMessage();
-  let threadText = op?.content ?? "";
-
+  let threadText = "";
+  let counter = 0;
   threadMessages.forEach((msg) => {
     if (authorOnly && msg.author.id != op?.author.id) return;
     threadText += `\n${msg.content}`;
   });
 
   return threadText;
-}
+};
 
 export const getThread = async (thread: discord.AnyThreadChannel) => {
   let threadMessages = await fetchAllMessages(thread);
@@ -42,7 +56,7 @@ export const getThread = async (thread: discord.AnyThreadChannel) => {
 
     try {
       let op = await thread.fetchStarterMessage();
-      
+
       if (op) {
         const threadText = await getThreadText(thread);
         const embedding = await getEmbeddingForText(threadText);
@@ -82,53 +96,3 @@ export const getMessages = async (client: discord.Client) => {
     }
   }
 };
-
-// Get all docs and insert with embeddings into db
-export async function getDocs() {
-  for (const slug of slugs) {
-    try {
-      headers.Referer = DOCS_BASE_URL + slug;
-      let response = await fetch(DOCS_BASE_URL + slug + "?json=on", { headers: headers });
-      let doc = await response.json();
-
-      doc.embedding = await getEmbeddingForText(`${doc.doc.title}\n${doc.doc.body}`);
-
-      insertDoc({
-        slug: slug,
-        embedding: doc.embedding,
-        title: doc.doc.title,
-        body: doc.doc.body,
-        updated_at: doc.doc.updatedAt,
-      });
-    } catch (e) {
-      console.log(`failed to load doc for slug ${slug}`, e);
-    }
-  }
-}
-
-// Get all apis and insert with embeddings into db
-export async function getApis() {
-  try {
-    headers.Referer = API_DOCS_BASE_URL;
-    let slug = `getactivityv5`; // we get full API specs from a single endpoint
-    let response = await fetch(API_DOCS_BASE_URL + slug + "?json=on", { headers: headers });
-    let api = (await response.json()).oasDefinition.paths;
-
-    for (var path of Object.keys(api)) {
-      if (!path.startsWith("/admin")) {
-        let embedding = await getEmbeddingForText(JSON.stringify(api[path], null, 4));
-        let version = Number(path.slice(path.lastIndexOf("/") + 2)) || 0;
-
-        await insertApi({
-          path,
-          embedding,
-          name: api[path].get ? api[path].get.operationId : api[path].post?.operationId ?? path,
-          spec: api[path],
-          version,
-        });
-      }
-    }
-  } catch (e) {
-    console.log(`failed to load api`, e);
-  }
-}
