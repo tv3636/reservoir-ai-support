@@ -1,7 +1,12 @@
-import discord, { Events, GatewayIntentBits, Partials, ThreadChannel } from "discord.js";
+import discord, {
+  ButtonComponent,
+  Events,
+  GatewayIntentBits,
+  Partials,
+  ThreadChannel,
+} from "discord.js";
 import dotenv from "dotenv";
-import { getApis, getDocs, getMessages, getThreadText } from "./utils/backfill";
-import { getAll } from "./utils/db";
+import { getThreadText } from "./utils/backfill";
 import {
   getAskButton,
   getOptInEmbed,
@@ -10,20 +15,18 @@ import {
   userOptIn,
   getFeedbackEmbed,
   ASK_AI_BUTTON,
+  NO,
+  existingThread,
+  YES,
+  WAIT_FOR_AGENT,
 } from "./utils/discord";
-import { getResponseForQuery } from "./utils/openai";
+import axios from "axios";
 
 dotenv.config();
 
 if (!process.env.DISCORD_BOT_TOKEN) {
   throw new Error("No bot token found!");
 }
-
-export const resources: any = {
-  docs: [],
-  apis: [],
-  messages: [],
-};
 
 const client = new discord.Client({
   intents: [
@@ -36,32 +39,63 @@ const client = new discord.Client({
 
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user?.tag}!`);
-
-  // Backfill database with resources if BACKFILL=1
-  if (process.env.BACKFILL) { 
-    console.log("Backfilling database with resources...");
-    getApis();
-    getDocs();
-    getMessages(client);
-  }
-
-  try {
-    // Load resources with embeddings from database
-    for (const resource of Object.keys(resources)) {
-      resources[resource] = await getAll(resource);
-      console.log(`Loaded ${resources[resource].length} ${resource} from database.`);
-    }
-  } catch (e) {
-    console.log(e);
-  }
 });
-
 
 client.on("messageCreate", async (message: discord.Message) => {
   if (message.author.id === client.user?.id) return;
 
   if (newThread(message)) {
     userOptIn(message.channel as ThreadChannel);
+  } else if (existingThread(message)) {
+    // Start bot thinking indicator
+
+    const op = await (message.channel as ThreadChannel).fetchStarterMessage();
+
+    if (op && op.thread && message.channel && message.author.id == op.author.id) {
+      const threadMessages = await op.thread.messages.fetch();
+      const botMessages = Array.from(
+        threadMessages
+          .filter((threadMessage) => threadMessage.author.id === client.user?.id)
+          .values()
+      );
+
+      const botReply = botMessages[0].components?.[0]?.components?.[0]?.data
+        ? botMessages[0].components[0].components[0].data
+        : botMessages[1].components[0].components[0].data;
+
+      if (
+        (botReply.disabled &&
+          ((botReply as ButtonComponent).label === YES ||
+            (botReply as ButtonComponent).label === WAIT_FOR_AGENT)) ||
+        (botReply as ButtonComponent).label === ASK_AI_BUTTON
+      )
+        return;
+
+      message.channel.sendTyping();
+      const typing = setInterval(() => message.channel.sendTyping(), 9000);
+
+      // Get AI response and send reply
+      const question = message.content;
+      const threadHistory = await getThreadText(op.thread, true);
+      const { data } = await axios.post(
+        "https://reservoir-ai-api-production-ea91.up.railway.app/api/generate-response",
+        { supportType: "discord", question, threadHistory },
+        {
+          headers: {
+            "admin-api-key": process.env.ADMIN_API_KEY,
+          },
+        }
+      );
+
+      // Stop bot thinking indicator
+      clearInterval(typing);
+
+      await (message.channel as ThreadChannel).send({
+        content: data?.response,
+        components: [getFeedbackButtons()],
+        embeds: [getFeedbackEmbed()],
+      });
+    }
   }
 });
 
@@ -86,13 +120,30 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
         await interaction.deferReply();
 
         // Get AI response and send reply
-        const allMessages = await getThreadText(op.thread, true);
-        const response = await getResponseForQuery(allMessages);
-        await interaction.editReply({
-          content: response?.content,
-          components: [getFeedbackButtons()],
-          embeds: [getFeedbackEmbed()],
-        });
+        const question = await getThreadText(op.thread, true);
+        const { data } = await axios.post(
+          "https://reservoir-ai-api-production-ea91.up.railway.app/api/generate-response",
+          { supportType: "discord", question, threadHistory: "" },
+          {
+            headers: {
+              "admin-api-key": process.env.ADMIN_API_KEY,
+            },
+          }
+        );
+
+        await interaction.deleteReply();
+
+        const response = data?.response;
+        const chunks = response.match(/[\s\S]{1,1999}\s/g) || [];
+
+        // Send all chunks as new messages
+        for (let i = 0; i < chunks.length; i++) {
+          await (interaction.channel as discord.TextChannel).send({
+            content: chunks[i],
+            components: i === chunks.length - 1 ? [getFeedbackButtons()] : [],
+            embeds: i === chunks.length - 1 ? [getFeedbackEmbed()] : [],
+          });
+        }
       } else {
         // Update feedback buttons with user response
         await interaction.update({
@@ -105,7 +156,6 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
     console.log(e);
   }
 });
-
 
 // Wake up 🤖
 client.login(process.env.DISCORD_BOT_TOKEN);

@@ -9,11 +9,18 @@ import discord, {
 export const ASK_AI_BUTTON = "Ask Reservoir AI";
 export const YES = "Yes";
 export const NO = "No";
+export const WAIT_FOR_AGENT = "Wait for an agent";
 
 // Returns true if the message started a new thread
 export const newThread = (message: discord.Message) => {
   return (
     message.channel.isThread() && message.channel.messageCount && message.channel.messageCount == 2
+  );
+};
+
+export const existingThread = (message: discord.Message) => {
+  return (
+    message.channel.isThread() && message.channel.messageCount && message.channel.messageCount > 2
   );
 };
 
@@ -74,6 +81,16 @@ export const getFeedbackButtons = (response?: string) => {
         .setCustomId(NO)
         .setLabel(NO)
         .setStyle(ButtonStyle.Danger)
+        .setDisabled(response != undefined)
+    );
+  }
+
+  if (!response || response == WAIT_FOR_AGENT) {
+    actionBuilder.addComponents(
+      new ButtonBuilder()
+        .setCustomId(WAIT_FOR_AGENT)
+        .setLabel(WAIT_FOR_AGENT)
+        .setStyle(ButtonStyle.Success)
         .setDisabled(response != undefined)
     );
   }
