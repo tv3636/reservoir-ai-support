@@ -87,8 +87,6 @@ client.on("messageCreate", async (message: discord.Message) => {
         }
       );
 
-      // const data = { response: "test" };
-
       // Stop bot thinking indicator
       clearInterval(typing);
 
