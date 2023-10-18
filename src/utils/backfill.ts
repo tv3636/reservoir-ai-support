@@ -38,8 +38,10 @@ export const fetchAllMessages = async (thread: discord.AnyThreadChannel) => {
 export const getThreadText = async (thread: discord.AnyThreadChannel, authorOnly?: boolean) => {
   const threadMessages = await fetchAllMessages(thread);
   const op = await thread.fetchStarterMessage();
-  let threadText = "";
-  let counter = 0;
+  if (!op) return;
+
+  let threadText = op.content;
+
   threadMessages.forEach((msg) => {
     if (authorOnly && msg.author.id != op?.author.id) return;
     threadText += `\n${msg.content}`;
@@ -48,6 +50,7 @@ export const getThreadText = async (thread: discord.AnyThreadChannel, authorOnly
   return threadText;
 };
 
+/* 
 export const getThread = async (thread: discord.AnyThreadChannel) => {
   let threadMessages = await fetchAllMessages(thread);
 
@@ -96,3 +99,4 @@ export const getMessages = async (client: discord.Client) => {
     }
   }
 };
+*/
