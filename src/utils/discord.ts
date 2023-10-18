@@ -7,8 +7,6 @@ import discord, {
 } from "discord.js";
 
 export const ASK_AI_BUTTON = "Ask Reservoir AI";
-export const YES = "Yes";
-export const NO = "No";
 export const WAIT_FOR_AGENT = "Wait for an agent";
 
 // Returns true if the message started a new thread
@@ -38,8 +36,9 @@ export const getOptInEmbed = () => {
 
 export const getFeedbackEmbed = () => {
   return getEmbed({
-    title: "Did this answer your question?",
-    footer: "If not, a human will get back to you shortly.",
+    title: "Need to ask another question?",
+    footer:
+      "Send another message to ask the AI again; otherwise, select the button below to wait for an agent.",
   });
 };
 
@@ -64,26 +63,6 @@ export const getAskButton = (enabled: boolean) => {
 
 export const getFeedbackButtons = (response?: string) => {
   let actionBuilder = new ActionRowBuilder<ButtonBuilder>();
-
-  if (!response || response == YES) {
-    actionBuilder.addComponents(
-      new ButtonBuilder()
-        .setCustomId(YES)
-        .setLabel(YES)
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(response != undefined)
-    );
-  }
-
-  if (!response || response == NO) {
-    actionBuilder.addComponents(
-      new ButtonBuilder()
-        .setCustomId(NO)
-        .setLabel(NO)
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(response != undefined)
-    );
-  }
 
   if (!response || response == WAIT_FOR_AGENT) {
     actionBuilder.addComponents(

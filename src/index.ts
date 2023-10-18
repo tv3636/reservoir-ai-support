@@ -15,9 +15,7 @@ import {
   userOptIn,
   getFeedbackEmbed,
   ASK_AI_BUTTON,
-  NO,
   existingThread,
-  YES,
   WAIT_FOR_AGENT,
 } from "./utils/discord";
 import axios from "axios";
@@ -64,9 +62,7 @@ client.on("messageCreate", async (message: discord.Message) => {
         : botMessages[1].components[0].components[0].data;
 
       if (
-        (botReply.disabled &&
-          ((botReply as ButtonComponent).label === YES ||
-            (botReply as ButtonComponent).label === WAIT_FOR_AGENT)) ||
+        (botReply.disabled && (botReply as ButtonComponent).label === WAIT_FOR_AGENT) ||
         (botReply as ButtonComponent).label === ASK_AI_BUTTON
       )
         return;
@@ -90,11 +86,17 @@ client.on("messageCreate", async (message: discord.Message) => {
       // Stop bot thinking indicator
       clearInterval(typing);
 
-      await (message.channel as ThreadChannel).send({
-        content: data?.response,
-        components: [getFeedbackButtons()],
-        embeds: [getFeedbackEmbed()],
-      });
+      const response = data?.response;
+      const chunks = response.match(/[\s\S]{1,1999}/g) || [];
+
+      // Send all chunks as new messages
+      for (let i = 0; i < chunks.length; i++) {
+        await (message.channel as discord.TextChannel).send({
+          content: chunks[i],
+          components: i === chunks.length - 1 ? [getFeedbackButtons()] : [],
+          embeds: i === chunks.length - 1 ? [getFeedbackEmbed()] : [],
+        });
+      }
     }
   }
 });
@@ -133,8 +135,8 @@ client.on(Events.InteractionCreate, async (interaction: discord.Interaction) => 
 
         await interaction.deleteReply();
 
-        const response = data?.response;
-        const chunks = response.match(/[\s\S]{1,1999}\s/g) || [];
+        const response: string = data?.response;
+        const chunks = response.match(/[\s\S]{1,1999}/g) || [];
 
         // Send all chunks as new messages
         for (let i = 0; i < chunks.length; i++) {
